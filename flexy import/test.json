@@ -1,0 +1,865 @@
+{
+  "retcode": "0 Done",
+  "answer": {
+    "current": [
+      {
+        "Position": "1038756",
+        "ExternalID": "252249CED0255618",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "0",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1753287096",
+        "TimeUpdate": "1753287096",
+        "TimeCreateMsc": "1753287096535",
+        "TimeUpdateMsc": "1753287096535",
+        "ModifyFlags": "0",
+        "PriceOpen": "3415.04",
+        "PriceCurrent": "3374.89",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "1700",
+        "VolumeExt": "17000000",
+        "Profit": "-682.55",
+        "Storage": "6.34",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3415.04000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1038756",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3414.86",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1038794",
+        "ExternalID": "F9F0740CCF723404",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "0",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1753288591",
+        "TimeUpdate": "1753288591",
+        "TimeCreateMsc": "1753288591998",
+        "TimeUpdateMsc": "1753288591998",
+        "ModifyFlags": "0",
+        "PriceOpen": "3411.99",
+        "PriceCurrent": "3374.89",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "500",
+        "VolumeExt": "5000000",
+        "Profit": "-185.50",
+        "Storage": "1.90",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3411.99000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1038794",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3411.82",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1038895",
+        "ExternalID": "D9466B3C6308AB15",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "1",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1753290126",
+        "TimeUpdate": "1753290126",
+        "TimeCreateMsc": "1753290126426",
+        "TimeUpdateMsc": "1753290126426",
+        "ModifyFlags": "0",
+        "PriceOpen": "3387.96",
+        "PriceCurrent": "3375.04",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "1700",
+        "VolumeExt": "17000000",
+        "Profit": "219.64",
+        "Storage": "-74.74",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3387.96000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1038895",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3388.16",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1038908",
+        "ExternalID": "73FFD883BE5EE6CD",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "1",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1753290160",
+        "TimeUpdate": "1753290160",
+        "TimeCreateMsc": "1753290160507",
+        "TimeUpdateMsc": "1753290160507",
+        "ModifyFlags": "0",
+        "PriceOpen": "3388.87",
+        "PriceCurrent": "3375.04",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "500",
+        "VolumeExt": "5000000",
+        "Profit": "69.15",
+        "Storage": "-21.96",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3388.87000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1038908",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3389.07",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1039019",
+        "ExternalID": "362414D5AFD35886",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "0",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1753301435",
+        "TimeUpdate": "1753301435",
+        "TimeCreateMsc": "1753301435231",
+        "TimeUpdateMsc": "1753301435231",
+        "ModifyFlags": "0",
+        "PriceOpen": "3394.57",
+        "PriceCurrent": "3374.89",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "500",
+        "VolumeExt": "5000000",
+        "Profit": "-98.40",
+        "Storage": "1.90",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3394.57000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1039019",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3394.38",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1039033",
+        "ExternalID": "61D6E02E5315027A",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "1",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1753305995",
+        "TimeUpdate": "1753305995",
+        "TimeCreateMsc": "1753305995599",
+        "TimeUpdateMsc": "1753305995599",
+        "ModifyFlags": "0",
+        "PriceOpen": "3388.94",
+        "PriceCurrent": "3375.04",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "500",
+        "VolumeExt": "5000000",
+        "Profit": "69.50",
+        "Storage": "-21.96",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3388.94000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1039033",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3389.13",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1051706",
+        "ExternalID": "E69359BD17833A39",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "1",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1754058058",
+        "TimeUpdate": "1754058058",
+        "TimeCreateMsc": "1754058058539",
+        "TimeUpdateMsc": "1754058058539",
+        "ModifyFlags": "0",
+        "PriceOpen": "3351.15",
+        "PriceCurrent": "3375.04",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "500",
+        "VolumeExt": "5000000",
+        "Profit": "-119.45",
+        "Storage": "-5.49",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3351.15000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1051706",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3351.33",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1051710",
+        "ExternalID": "8F2BC79FDF9BD869",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "1",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1754058265",
+        "TimeUpdate": "1754058265",
+        "TimeCreateMsc": "1754058265155",
+        "TimeUpdateMsc": "1754058265155",
+        "ModifyFlags": "0",
+        "PriceOpen": "3350.55",
+        "PriceCurrent": "3375.04",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "500",
+        "VolumeExt": "5000000",
+        "Profit": "-122.45",
+        "Storage": "-5.49",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3350.55000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1051710",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3350.74",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      },
+      {
+        "Position": "1051902",
+        "ExternalID": "3DB9EABA0083353C",
+        "Login": "60591",
+        "Dealer": "2",
+        "Symbol": "XAUUSD",
+        "Action": "1",
+        "Digits": "2",
+        "DigitsCurrency": "2",
+        "Reason": "16",
+        "ContractSize": "100.00",
+        "TimeCreate": "1754284971",
+        "TimeUpdate": "1754284971",
+        "TimeCreateMsc": "1754284971870",
+        "TimeUpdateMsc": "1754284971870",
+        "ModifyFlags": "0",
+        "PriceOpen": "3360.49",
+        "PriceCurrent": "3375.04",
+        "PriceSL": "0.00",
+        "PriceTP": "0.00",
+        "Volume": "1000",
+        "VolumeExt": "10000000",
+        "Profit": "-145.50",
+        "Storage": "0.00",
+        "RateProfit": "1.00000000",
+        "RateMargin": "3360.49000000",
+        "ExpertID": "0",
+        "ExpertPositionID": "1051902",
+        "Comment": "",
+        "ActivationMode": "0",
+        "ActivationTime": "0",
+        "ActivationPrice": "0.00",
+        "ActivationFlags": "0",
+        "ActionGateway": "0",
+        "PriceGateway": "3360.68",
+        "VolumeGatewayExt": "0",
+        "ApiData": [
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          },
+          {
+            "AppID": "0",
+            "ID": "0",
+            "ValueInt": "0",
+            "ValueUInt": "0",
+            "ValueDouble": "0.00000000"
+          }
+        ]
+      }
+    ],
+    "invalid": [],
+    "missed": [],
+    "nonexist": []
+  }
+}

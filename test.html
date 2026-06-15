@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <form method="POST" action="https://api-gateway-uat.ngenius-payments.com/netcetera/acs/create">
+    <input type="hidden" name="PaReq" value="AcsPaReq" />
+    <input type="hidden" name="MD" value="6113514d62180f5f" />
+    <input type="hidden" name="TermUrl" value="https://yourdomain.com/3ds/return" />
+  </form>
+
+  <script>
+    document.forms[0].submit();
+  </script>
+</body>
+</html>

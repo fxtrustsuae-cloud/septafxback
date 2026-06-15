@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScalpGuard — Brokerage Trade Violation Detector</title>
+  <meta name="description" content="Upload trading history files to detect scalping violations, calculate net eligible profit, and export compliance reports." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M14 2L24 8V20L14 26L4 20V8L14 2Z" stroke="url(#g1)" stroke-width="1.5" fill="none"/>
+        <path d="M14 7L20 11V19L14 23L8 19V11L14 7Z" fill="url(#g1)" opacity="0.3"/>
+        <circle cx="14" cy="15" r="3" fill="url(#g1)"/>
+        <defs>
+          <linearGradient id="g1" x1="4" y1="2" x2="24" y2="26" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6C63FF"/>
+            <stop offset="1" stop-color="#00D4AA"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div>
+      <span class="nav-title">ScalpGuard</span>
+      <span class="nav-subtitle">Trade Compliance Engine</span>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-badge">
+      <span class="badge-dot"></span>
+      <span>Live</span>
+    </div>
+    <div class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════
+     HERO / UPLOAD SECTION
+════════════════════════════════════════════════ -->
+<main>
+  <section class="hero-section">
+    <div class="hero-text">
+      <h1>Scalping Violation Detector</h1>
+      <p>Upload trading history to instantly identify scalping trades (&lt;3 min), compute net eligible profits, and generate compliance-ready reports.</p>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="upload-card" id="uploadCard">
+      <div class="upload-zone" id="dropZone">
+        <div class="upload-icon-wrap">
+          <svg class="upload-icon" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="30" stroke="url(#ug)" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <path d="M32 40V24" stroke="url(#ug)" stroke-width="2" stroke-linecap="round"/>
+            <path d="M24 32L32 24L40 32" stroke="url(#ug)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="22" y="43" width="20" height="3" rx="1.5" fill="url(#ug)" opacity="0.5"/>
+            <defs>
+              <linearGradient id="ug" x1="2" y1="2" x2="62" y2="62" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#6C63FF"/><stop offset="1" stop-color="#00D4AA"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <p class="drop-title">Drag & drop your file here</p>
+        <p class="drop-sub">Supports <strong>.xlsx</strong> · <strong>.xls</strong> · <strong>.csv</strong> · up to 50 MB</p>
+        <label class="btn-upload" for="fileInput">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V6h4a.5.5 0 0 1 0 1h-4v4.5a.5.5 0 0 1-1 0V7h-4a.5.5 0 0 1 0-1h4V1.5A.5.5 0 0 1 8 1z"/></svg>
+          Browse File
+        </label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+        <div class="file-chosen" id="fileChosen"></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" class="filter-input" />
+        </div>
+        <div class="filter-group">
+          <label for="endDate">End Date</label>
+          <input type="date" id="endDate" class="filter-input" />
+        </div>
+        <div class="filter-group">
+          <label for="scalpingTimeLimit" title="Trades shorter than this are marked as scalping">Scalping Limit (mins)</label>
+          <input type="number" id="scalpingTimeLimit" class="filter-input" value="3" min="0" step="0.5" />
+        </div>
+        <div class="filter-group" style="justify-content:flex-end; align-self:flex-end;">
+          <button class="btn-primary" id="analyzeBtn" disabled>
+            <span class="btn-icon">⚡</span>
+            Analyze File
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap" style="display:none">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <p class="progress-text" id="progressText">Uploading file…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="alert alert-error" id="errorAlert" style="display:none">
+      <span class="alert-icon">⚠️</span>
+      <span id="errorMsg"></span>
+      <button class="alert-close" onclick="dismissError()">✕</button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       RESULTS SECTION (hidden until data loaded)
+  ════════════════════════════════════════════════ -->
+  <section class="results-section" id="resultsSection" style="display:none">
+
+    <!-- Stats Cards -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Controls bar -->
+    <div class="controls-bar">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.44 1.406a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+        </svg>
+        <input type="text" id="searchUser" class="search-input" placeholder="Search by User ID…" />
+      </div>
+      <div class="filter-pills">
+        <button class="pill active" data-filter="all">All Users</button>
+        <button class="pill" data-filter="violation">Violations Only</button>
+        <button class="pill" data-filter="high">High Risk</button>
+        <button class="pill" data-filter="eligible">Eligible</button>
+      </div>
+      <button class="btn-export" id="exportBtn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+        Export Excel
+      </button>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3 class="chart-title">Profit vs Scalping Profit per User</h3>
+        <div class="chart-wrap"><canvas id="profitChart"></canvas></div>
+      </div>
+      <div class="chart-card chart-card--sm">
+        <h3 class="chart-title">Risk Level Distribution</h3>
+        <div class="chart-wrap"><canvas id="riskChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- User Summary Table -->
+    <div class="table-card">
+      <div class="table-header-row">
+        <h2 class="table-title">User Summary Report</h2>
+        <span class="table-count" id="tableCount"></span>
+      </div>
+      <div class="table-wrapper">
+        <table id="summaryTable">
+          <thead>
+            <tr>
+              <th data-sort="user_id">User ID <span class="sort-icon">↕</span></th>
+              <th data-sort="total_trades">Total Trades <span class="sort-icon">↕</span></th>
+              <th data-sort="total_lots">Total Lots <span class="sort-icon">↕</span></th>
+              <th data-sort="positive_trades">Positive <span class="sort-icon">↕</span></th>
+              <th data-sort="negative_trades">Negative <span class="sort-icon">↕</span></th>
+              <th data-sort="scalping_trades">Scalping Trades <span class="sort-icon">↕</span></th>
+              <th data-sort="total_profit">Total Profit <span class="sort-icon">↕</span></th>
+              <th data-sort="scalping_lots">Scalping Lots <span class="sort-icon">↕</span></th>
+              <th data-sort="scalping_profit">Scalping Profit <span class="sort-icon">↕</span></th>
+              <th data-sort="scalping_loss">Scalping Loss <span class="sort-icon">↕</span></th>
+              <th data-sort="net_eligible_profit">Net Eligible Profit <span class="sort-icon">↕</span></th>
+              <th data-sort="violation">Violation <span class="sort-icon">↕</span></th>
+              <th data-sort="risk_level">Risk Level <span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Scalping Trades Log -->
+    <div class="table-card" id="scalpingTradesCard" style="display:none; margin-top:2rem;">
+      <div class="table-header-row">
+        <h2 class="table-title">Scalping Trades Log (< 3 min)</h2>
+        <span class="table-count" id="scalpingCount"></span>
+      </div>
+      <div class="table-wrapper">
+        <table id="scalpingTable">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Trade Type</th>
+              <th>Open Time</th>
+              <th>Close Time</th>
+              <th>Duration (min)</th>
+              <th>Lot Size</th>
+              <th>Profit / Loss</th>
+            </tr>
+          </thead>
+          <tbody id="scalpingBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Parse errors (if any) -->
+    <div class="alert alert-warn" id="parseWarn" style="display:none">
+      <span class="alert-icon">⚠️</span>
+      <span id="parseWarnMsg"></span>
+    </div>
+
+  </section>
+</main>
+
+<footer class="footer">
+  <p>ScalpGuard © 2026 · Trade duration threshold: &lt; 3 minutes = Scalping · Built for brokerage compliance</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PGPASSWORD=password psql -U postgres -h localhost -p 5432 -c \"CREATE DATABASE \\\\\"flexyProd\\\\\";\")",
+      "Bash(PGPASSWORD=password psql -U postgres -h localhost -p 5432 -c \"\\\\l\")",
+      "Bash(git add *)",
+      "Bash(git fetch *)",
+      "Bash(git rebase *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(GIT_EDITOR=true git rebase --continue)",
+      "Bash(git push *)"
+    ]
+  }
+}

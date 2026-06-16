@@ -127,7 +127,7 @@ async function actionTracking(req, userId, api, description){
             : "Localhost or Private Network";
       
           // Parse User-Agent
-          const userAgentString = req.headers["user-agent"] || "unknown";
+          const userAgentString = (req && req.headers && req.headers["user-agent"]) || "unknown";
           const agent = useragent.parse(userAgentString);
           const device =
             agent && agent.family && agent.os

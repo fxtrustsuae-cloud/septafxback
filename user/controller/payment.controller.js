@@ -105,6 +105,38 @@ function normalizeCregisPaymentData(data, network) {
     };
 }
 
+function normalizePayOnCoinsPaymentData(data, network) {
+    const paymentAddress = data.to_address || data.payment_address;
+    const invoicePaymentUrl = data.invoice_payment_url;
+    const normalizedNetwork = normalizeNetwork(network);
+
+    const createdTimeStr = data.ondate || data.created_time;
+    let createdTimeMs = createdTimeStr ? new Date(createdTimeStr.endsWith("Z") ? createdTimeStr : createdTimeStr + "Z").getTime() : Date.now();
+    if (isNaN(createdTimeMs)) {
+        createdTimeMs = Date.now();
+    }
+    const expireTimeMs = createdTimeMs + 10 * 60 * 1000; // Make it 10 minutes
+
+    return {
+        ...data,
+        cregis_id: data.orderno,
+        gateway_order_id: data.orderno,
+        order_amount: data.amount_usd,
+        created_time: createdTimeMs,
+        expire_time: expireTimeMs,
+        order_currency: "USD",
+        payment_gateway: "PAYONCOINS",
+        payment_info: [{
+            payment_address: paymentAddress,
+            token_symbol: "USDT",
+            blockchain: normalizedNetwork,
+            token_name: "USDT",
+            receive_amount: data.amount || data.coinvalue,
+            decimals: 6,
+        }]
+    };
+}
+
 function assertPayableInvoice(data, gatewayName) {
     const paymentInfo = Array.isArray(data?.payment_info) ? data.payment_info[0] : null;
     const paymentAddress = firstPopulatedValue(paymentInfo, ADDRESS_FIELDS)
@@ -117,11 +149,11 @@ function assertPayableInvoice(data, gatewayName) {
     }
 }
 
-// function assertPayOnCoinsReady() {
-//     if (!config.PAYONCOINS_BASE_URL || !config.PAYONCOINS_PUBLIC_KEY || !config.PAYONCOINS_PRIVATE_KEY) {
-//         throw new Error("PayOnCoins backup gateway is not configured.");
-//     }
-// }
+function assertPayOnCoinsReady() {
+    if (!config.PAYONCOINS_BASE_URL || !config.PAYONCOINS_PUBLIC_KEY || !config.PAYONCOINS_PRIVATE_KEY) {
+        throw new Error("PayOnCoins gateway is not configured.");
+    }
+}
 
 function assertCregisReady() {
     if (!projectId || !apiKey || !apiBaseUrl) {
@@ -208,19 +240,55 @@ async function createCregisPaymentOrder(socketId, userId, amount, network) {
     };
 }
 
-// async function createPayOnCoinsPaymentOrder(socketId, userId, amount, network) {
-//     assertPayOnCoinsReady();
-//     ...
-// }
+async function createPayOnCoinsPaymentOrder(socketId, userId, amount, network) {
+    assertPayOnCoinsReady();
+
+    const user = await UserModel.findByPk(userId);
+    if (!user) {
+        throw new Error("User not found.");
+    }
+
+    const params = {
+        username: user.userName || user.name || "Client",
+        networkname: normalizeNetwork(network),
+        coinname: "USDT",
+        request_number: socketId,
+        amount_usd: amount.toString(),
+        useremail: user.email,
+    };
+
+    const response = await axios.post(`${config.PAYONCOINS_BASE_URL}/tp/create_invoice`, params, {
+        headers: {
+            'Content-Type': 'application/json',
+            publickey: config.PAYONCOINS_PUBLIC_KEY,
+            privatekey: config.PAYONCOINS_PRIVATE_KEY
+        },
+        timeout: PAYMENT_REQUEST_TIMEOUT_MS
+    });
+
+    if (!response.data || response.data.code !== "success") {
+        console.error("❌ PayOnCoins raw response:", JSON.stringify(response.data, null, 2));
+        throw new Error(response.data?.message || "PayOnCoins did not return a successful invoice.");
+    }
+
+    const normalizedData = normalizePayOnCoinsPaymentData(response.data, network);
+    assertPayableInvoice(normalizedData, "PayOnCoins");
+
+    return {
+        code: "success",
+        message: "Invoice generated successfully",
+        data: normalizedData
+    };
+}
 
 async function createPaymentOrder(socketId, userId, amount, network) {
     try {
-        const result = await createCregisPaymentOrder(socketId, userId, amount, network);
-        actionTracking("", userId, "DEPOSIT-REQUEST-CREGIS");
+        const result = await createPayOnCoinsPaymentOrder(socketId, userId, amount, network);
+        actionTracking("", userId, "DEPOSIT-REQUEST-PAYONCOINS");
         return result;
     } catch (error) {
-        console.error("❌ Cregis payment order failed:", error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
-        throw new Error(error.response?.data?.message || error.message || "Cregis payment request failed.");
+        console.error("❌ PayOnCoins payment order failed:", error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
+        throw new Error(error.response?.data?.message || error.message || "PayOnCoins payment request failed.");
     }
 }
 

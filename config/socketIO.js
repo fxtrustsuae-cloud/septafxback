@@ -246,7 +246,11 @@ const createSocketIO = (server) => {
 
 const socketEmitAll = (event, data) => {
     try {
-        socketIO.emit(event, data);
+        if (socketIO && typeof socketIO.emit === "function") {
+            socketIO.emit(event, data);
+        } else {
+            console.log(`[SocketIO Offline] socketEmitAll: event=${event}`);
+        }
     } catch (err) {
         console.error('EmitAll Error:', err);
     }
@@ -254,7 +258,11 @@ const socketEmitAll = (event, data) => {
 
 const socketEmitOne = (event, data, socketId) => {
     try {
-        socketIO.to(socketId.toString()).emit(event, data);
+        if (socketIO && typeof socketIO.to === "function") {
+            socketIO.to(socketId.toString()).emit(event, data);
+        } else {
+            console.log(`[SocketIO Offline] socketEmitOne: socketId=${socketId}, event=${event}`);
+        }
     } catch (err) {
         console.error('EmitOne Error:', err);
     }
@@ -262,7 +270,11 @@ const socketEmitOne = (event, data, socketId) => {
 
 const socketEmitRoom = (event, data, room) => {
     try {
-        socketIO.to(room).emit(event, data);
+        if (socketIO && typeof socketIO.to === "function") {
+            socketIO.to(room).emit(event, data);
+        } else {
+            console.log(`[SocketIO Offline] socketEmitRoom: room=${room}, event=${event}`);
+        }
     } catch (err) {
         console.error('EmitRoom Error:', err);
     }

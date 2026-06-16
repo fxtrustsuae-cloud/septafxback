@@ -62,7 +62,7 @@ module.exports.updateUser = async (request, response, next) => {
 module.exports.list = (request, response, next) => {
     const rules = Joi.object().keys({
         page: Joi.number().integer().min(1).optional(),
-        sizePerPage: Joi.number().integer().min(1).max(100).optional(),
+        sizePerPage: Joi.number().integer().min(1).max(100000).optional(),
         marketingId: Joi.number().integer().min(1).optional(),
         search: Joi.string().optional(),
         searchWithLogin: Joi.string().optional(),

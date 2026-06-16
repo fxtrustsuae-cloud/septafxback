@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { Op } = require("sequelize");
 const config = require("../../config/config");
 const SendMail = require("../../utils/mail");
 const AssetModel = require("../../models/asset.model");
@@ -273,6 +274,125 @@ module.exports.checkPaymentStatus = async (request, response) => {
 
     } catch (e) {
         userLogger.error('Error in checkPaymentStatus', { stack: e.stack || e });
+        handleErrorResponse(e, response);
+    }
+};
+
+module.exports.withdrawNotification = async (request, response) => {
+    try {
+        userLogger.info('Entering withdrawNotification', { method: request.method || "", route: request.originalUrl || "" });
+        console.log("PayOnCoins withdraw webhook:", request.body);
+
+        const body = request.body || {};
+        const orderNo = body.orderno || body.order_no || body.request_number || body.orderId || body.id;
+        const statusCode = Number(body.withdraw_status_code);
+
+        if (!orderNo) {
+            return response.status(400).json({
+                status_code: 400,
+                detail: { code: 'error', message: 'Missing order reference' },
+                headers: null
+            });
+        }
+
+        const sequelize = require("../../config/db.config");
+
+        const result = await sequelize.transaction(async (dbTransaction) => {
+            const withdrawal = await DepositWithdrawModel.findOne({
+                where: {
+                    [Op.or]: [
+                        { transactionReference: orderNo },
+                        { id: isNaN(Number(orderNo)) ? null : Number(orderNo) }
+                    ],
+                    transactionType: 'WITHDRAW',
+                    isDeleted: false
+                },
+                transaction: dbTransaction,
+                lock: dbTransaction.LOCK.UPDATE
+            });
+
+            if (!withdrawal) {
+                return { success: false, code: 'not_found' };
+            }
+
+            if (withdrawal.status === 'COMPLETED' || withdrawal.status === 'REJECTED') {
+                return { success: true, code: 'already_processed' };
+            }
+
+            const amount = Number(withdrawal.amount);
+
+            if (statusCode === 100) {
+                withdrawal.status = 'COMPLETED';
+                withdrawal.remark = body.remark || `Completed via PayOnCoins withdraw webhook.`;
+                await withdrawal.save({ transaction: dbTransaction });
+
+                await TransactionModel.create({
+                    userId: withdrawal.userId,
+                    amount,
+                    transactionType: 'WALLET-WITHDRAW',
+                    remark: withdrawal.remark,
+                    referrenceNo: body.transaction_hash || body.Transaction_hash || orderNo
+                }, { transaction: dbTransaction });
+
+                return { success: true, code: 'completed', withdrawal };
+            } else if (statusCode === 4 || statusCode === -1) {
+                withdrawal.status = 'REJECTED';
+                withdrawal.remark = body.remark || `Failed via PayOnCoins withdraw webhook (status code: ${statusCode}).`;
+                await withdrawal.save({ transaction: dbTransaction });
+
+                const assetData = await AssetModel.findOne({
+                    where: { userId: withdrawal.userId, isDeleted: false },
+                    transaction: dbTransaction,
+                    lock: dbTransaction.LOCK.UPDATE
+                });
+
+                if (assetData) {
+                    assetData.mainBalance = Number(assetData.mainBalance) + amount;
+                    await assetData.save({ transaction: dbTransaction });
+                }
+
+                return { success: true, code: 'rejected', withdrawal };
+            }
+
+            return { success: false, code: 'ignored_status' };
+        });
+
+        if (result.success && (result.code === 'completed' || result.code === 'rejected')) {
+            const withdrawal = result.withdrawal;
+            const action = result.code === 'completed' ? 'PAYMENT-VERIFIED-WITHDRAW-PAYONCOINS' : 'PAYMENT-FAILED-WITHDRAW-PAYONCOINS';
+            actionTracking('', withdrawal.userId, action);
+
+            const user = await UserModel.findByPk(withdrawal.userId);
+            if (user) {
+                if (result.code === 'completed') {
+                    SendMail.sendTransactionAlertEmail(
+                        user.email,
+                        user.userName,
+                        "USDT-WITHDRAW",
+                        Number(withdrawal.amount),
+                        withdrawal.id,
+                        new Date()
+                    ).catch(() => {});
+                }
+                SendMail.sendTransactionAlertEmail(
+                    config.ALERT_MAIL,
+                    user.userName,
+                    `USDT-WITHDRAW-${result.code.toUpperCase()}`,
+                    Number(withdrawal.amount),
+                    withdrawal.id,
+                    new Date()
+                ).catch(() => {});
+            }
+        }
+
+        userLogger.info('Exiting withdrawNotification: processed', { code: result.code });
+        return response.status(200).json({
+            status_code: 200,
+            detail: { code: 'success' },
+            headers: null
+        });
+    } catch (e) {
+        userLogger.error('Error in withdrawNotification', { stack: e.stack || e });
         handleErrorResponse(e, response);
     }
 };

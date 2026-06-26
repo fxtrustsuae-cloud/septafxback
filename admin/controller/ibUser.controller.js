@@ -1,4 +1,5 @@
 const { Op } = require("sequelize");
+const sequelize = require("../../config/db.config");
 const ibPlanConfig = require("../../config/ibPlan.json")
 const IbModel = require("../../models/ib.model");
 const GroupModel = require("../../models/group.model");
@@ -12,6 +13,7 @@ const subIbComissionModel = require("../../models/subIbComission.model");
 const IbComissionPlanModel = require("../../models/ibComissionPlan.model");
 const IbcomissionTrxModel = require("../../models/ibComissionTransaction.model");
 const IbComissionPlanNameModel = require("../../models/ibComissionPlanName.model");
+const { orderTracking } = require("../../user/controller/orders.controller");
 const { handleErrorResponse, CustomErrorHandler } = require("../../middleware/CustomErrorHandler");
 const { adminLogger } = require("../../utils/logger");
 
@@ -748,11 +750,13 @@ module.exports.ibReport = async (request, response) => {
     }
 };
 
-async function distributeComissionHelper(userId, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, distributedAmount = 0) {
+async function distributeComissionHelper(userId, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, distributedAmount = 0, dbTransaction = null) {
     try {
         console.log(`[DEBUG] distributeComissionHelper: userId=${userId}, ibPlanId=${ibPlanId}, remainingAmount=${remainingAmount}, fromUser=${fromUser}, ibId=${ibId}, distributedAmount=${distributedAmount}`);
+        const queryOptions = dbTransaction ? { transaction: dbTransaction } : {};
         const checkUser = await UserModel.findOne({
-            where: { id: userId, isDeleted: false, isComissionAllowed: false }
+            where: { id: userId, isDeleted: false, isComissionAllowed: false },
+            ...queryOptions
         });
         if (!checkUser) {
             console.log(`[DEBUG] Sponsor user ID=${userId} not found, deleted, or isComissionAllowed !== false. Stopping tree recursion.`);
@@ -761,7 +765,8 @@ async function distributeComissionHelper(userId, ibPlanId, order, remainingAmoun
         console.log(`[DEBUG] Found sponsor user ID=${userId}: email=${checkUser.email}, isSubIb=${checkUser.isSubIb}, fromUser=${checkUser.fromUser}`);
 
         const comissionData = await subIbComissionModel.findOne({
-            where: { ibId, ibPlanId, subIbId: userId, isDeleted: false }
+            where: { ibId, ibPlanId, subIbId: userId, isDeleted: false },
+            ...queryOptions
         });
 
         let newDistributedAmount = distributedAmount;
@@ -794,16 +799,18 @@ async function distributeComissionHelper(userId, ibPlanId, order, remainingAmoun
                 comissionAmount,
                 ibId,
                 type: (order.Action == 0 || order.Action == "0" || order.type == 0) ? "BUY" : "SELL",
-            });
+            }, queryOptions);
 
             const assetData = await AssetModel.findOne({
-                where: { userId, isDeleted: false }
+                where: { userId, isDeleted: false },
+                ...queryOptions
             });
-            if (assetData) {
-                assetData.totalIBIncome += Number(comissionAmount);
-                await assetData.save();
-                console.log(`[DEBUG] Updated Asset Model for sub-IB User ID=${userId}: new totalIBIncome=${assetData.totalIBIncome}`);
+            if (!assetData) {
+                throw new Error(`Asset wallet not found for sub-IB User ID=${userId}`);
             }
+            assetData.totalIBIncome = Number(assetData.totalIBIncome || 0) + Number(comissionAmount);
+            await assetData.save(queryOptions);
+            console.log(`[DEBUG] Updated Asset Model for sub-IB User ID=${userId}: new totalIBIncome=${assetData.totalIBIncome}`);
 
             remainingAmount -= comissionAmount;
             newDistributedAmount += comissionAmount;
@@ -813,7 +820,7 @@ async function distributeComissionHelper(userId, ibPlanId, order, remainingAmoun
 
         if (checkUser.fromUser) {
             console.log(`[DEBUG] Recursing up to parent sponsor ID=${checkUser.fromUser}`);
-            return await distributeComissionHelper(checkUser.fromUser, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, newDistributedAmount);
+            return await distributeComissionHelper(checkUser.fromUser, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, newDistributedAmount, dbTransaction);
         }
 
         console.log(`[DEBUG] Reached root of sponsor tree for User ID=${userId}. Returning remaining commission amount: ${remainingAmount}`);
@@ -823,6 +830,32 @@ async function distributeComissionHelper(userId, ibPlanId, order, remainingAmoun
         return false;
     }
 }
+
+module.exports.trackMt5Orders = async (request, response) => {
+    try {
+        adminLogger.info('Entering trackMt5Orders', { method: request.method || "", route: request.originalUrl || "" });
+        const { user, ibId, fromDate, toDate } = request.body;
+
+        const userData = await UserModel.findOne({
+            where: { id: user.id, isDeleted: false, role: { [Op.in]: ["ADMIN", "SUPER-ADMIN"] } }
+        });
+        if (!userData) {
+            throw CustomErrorHandler.wrongCredentials("Access Denied!");
+        }
+
+        const trackingResult = await orderTracking({ ibId, fromDate, toDate });
+
+        adminLogger.info('Exiting trackMt5Orders: Request Processed', { method: request.method || "", route: request.originalUrl || "" });
+        return response.json({
+            status: true,
+            message: "IB order tracking completed successfully.",
+            data: trackingResult
+        });
+    } catch (e) {
+        adminLogger.error('Error in trackMt5Orders', { stack: e.stack || e, method: request.method || "", route: request.originalUrl || "" });
+        handleErrorResponse(e, response);
+    }
+};
 
 module.exports.manualDistributeCommission = async (request, response) => {
     try {
@@ -874,6 +907,9 @@ module.exports.manualDistributeCommission = async (request, response) => {
         console.log(`[DEBUG] Date conditions resolved: ${JSON.stringify(dateCondition)}`);
 
         let totalProcessed = 0;
+        let totalRecovered = 0;
+        let totalSkipped = 0;
+        let totalAlreadyPaid = 0;
 
         for (const ib of ibList) {
             console.log(`\n[DEBUG] Processing IB: ID=${ib.id}, email=${ib.email}`);
@@ -903,103 +939,207 @@ module.exports.manualDistributeCommission = async (request, response) => {
             });
             console.log(`[DEBUG] Resolved target symbol matching list: ${JSON.stringify(symbols)}`);
 
-            // Find undistributed orders in the timeframe matching the symbol list for this IB
-            const orderWhere = {
+            // Find payable orders in the timeframe matching the symbol list for this IB.
+            // Also recover rows that were incorrectly flagged distributed without any commission transaction.
+            const baseOrderWhere = {
                 ibId: ib.id,
                 isDeleted: false,
-                isComissionDistributed: false,
                 Symbol: { [Op.in]: symbols }
             };
             if (Object.keys(dateCondition).length > 0) {
-                orderWhere.createdAt = dateCondition;
+                baseOrderWhere.createdAt = dateCondition;
             }
-            console.log(`[DEBUG] mt5Order query criteria: ${JSON.stringify(orderWhere)}`);
+            console.log(`[DEBUG] mt5Order base query criteria: ${JSON.stringify(baseOrderWhere)}`);
 
-            const orderList = await Mt5OrderModel.findAll({
-                where: orderWhere
+            const undistributedOrders = await Mt5OrderModel.findAll({
+                where: {
+                    ...baseOrderWhere,
+                    isComissionDistributed: false
+                }
             });
 
-            console.log(`[DEBUG] Found ${orderList.length} pending undistributed orders for IB ID=${ib.id}`);
+            const markedDistributedOrders = await Mt5OrderModel.findAll({
+                where: {
+                    ...baseOrderWhere,
+                    isComissionDistributed: true
+                }
+            });
+
+            let recoverableOrders = [];
+            if (markedDistributedOrders.length > 0) {
+                const markedOrderIds = markedDistributedOrders.map(order => order.id);
+                const paidOrderRows = await IbcomissionTrxModel.findAll({
+                    where: {
+                        ibId: ib.id,
+                        orderId: { [Op.in]: markedOrderIds },
+                        isDeleted: false
+                    },
+                    attributes: ["orderId"],
+                    raw: true
+                });
+                const paidOrderIds = new Set(paidOrderRows.map(row => Number(row.orderId)));
+                recoverableOrders = markedDistributedOrders.filter(order => !paidOrderIds.has(Number(order.id)));
+            }
+
+            totalRecovered += recoverableOrders.length;
+            const orderList = [...undistributedOrders, ...recoverableOrders];
+
+            console.log(`[DEBUG] Found ${undistributedOrders.length} pending undistributed orders and ${recoverableOrders.length} recoverable orphaned orders for IB ID=${ib.id}`);
             if (orderList.length === 0) continue;
 
             for (const order of orderList) {
                 console.log(`\n[DEBUG] --> Processing Order ID=${order.id}, PositionID=${order.PositionID}, Symbol=${order.Symbol}, Volume=${order.Volume}, extension="${order.extension}", userId=${order.userId}`);
-                const lot = Number(order.Volume) / 10000;
-                
-                const comissionData = await IbComissionPlanModel.findOne({
-                    where: { ibId: ib.id, symbolExtension: order.extension, isDeleted: false }
-                });
-                if (!comissionData) {
-                    console.log(`[DEBUG] [SKIP] No matching plan found for IB ID=${ib.id} with symbolExtension="${order.extension}"`);
-                    continue;
-                }
-                const comissionAmount = comissionData.ibComission * lot;
-                console.log(`[DEBUG] Found plan ID=${comissionData.id}, ibComission rate=${comissionData.ibComission}. Total base commission to distribute=${comissionAmount}`);
 
-                const orderUser = await UserModel.findByPk(order.userId);
-                if (!orderUser) {
-                    console.log(`[DEBUG] [SKIP] Order User ID=${order.userId} not found in DB!`);
-                    continue;
-                }
-                if (!orderUser.fromUser) {
-                    console.log(`[DEBUG] [SKIP] Order User ID=${order.userId} has no referrer parent sponsor (fromUser is null).`);
-                    continue;
-                }
-                console.log(`[DEBUG] Order user ID=${order.userId} referred by Sponsor ID=${orderUser.fromUser}`);
+                try {
+                    const result = await sequelize.transaction(async (dbTransaction) => {
+                        const currentOrder = await Mt5OrderModel.findByPk(order.id, { transaction: dbTransaction });
+                        if (!currentOrder || currentOrder.isDeleted) {
+                            return { processed: false, reason: "order_missing" };
+                        }
 
-                console.log(`[DEBUG] Calling distributeComissionHelper recursively starting at Sponsor ID=${orderUser.fromUser}`);
-                const remainingAmount = await distributeComissionHelper(
-                    orderUser.fromUser,
-                    comissionData.id,
-                    order,
-                    comissionAmount,
-                    comissionData,
-                    order.userId,
-                    ib.id,
-                    0
-                );
+                        const existingTrxCount = await IbcomissionTrxModel.count({
+                            where: { ibId: ib.id, orderId: currentOrder.id, isDeleted: false },
+                            transaction: dbTransaction
+                        });
+                        if (existingTrxCount > 0) {
+                            if (!currentOrder.isComissionDistributed) {
+                                await currentOrder.update({ isComissionDistributed: true }, { transaction: dbTransaction });
+                            }
+                            return { processed: false, reason: "already_paid" };
+                        }
 
-                console.log(`[DEBUG] distributeComissionHelper returned remainingAmount=${remainingAmount}`);
-                if (remainingAmount && remainingAmount > 0) {
-                    console.log(`[DEBUG] Crediting remaining commission ${remainingAmount} to master IB ID=${ib.id}`);
-                    const assetData = await AssetModel.findOne({
-                        where: { userId: ib.id, isDeleted: false }
+                        const lot = Number(currentOrder.Volume) / 10000;
+                        const comissionData = await IbComissionPlanModel.findOne({
+                            where: { ibId: ib.id, symbolExtension: currentOrder.extension, isDeleted: false },
+                            transaction: dbTransaction
+                        });
+                        if (!comissionData) {
+                            if (currentOrder.isComissionDistributed) {
+                                await currentOrder.update({ isComissionDistributed: false }, { transaction: dbTransaction });
+                            }
+                            return { processed: false, reason: `no plan for extension "${currentOrder.extension}"` };
+                        }
+
+                        const comissionAmount = Number(comissionData.ibComission || 0) * lot;
+                        console.log(`[DEBUG] Found plan ID=${comissionData.id}, ibComission rate=${comissionData.ibComission}. Total base commission to distribute=${comissionAmount}`);
+                        if (!Number.isFinite(comissionAmount) || comissionAmount <= 0) {
+                            if (currentOrder.isComissionDistributed) {
+                                await currentOrder.update({ isComissionDistributed: false }, { transaction: dbTransaction });
+                            }
+                            return { processed: false, reason: "commission amount is zero or invalid" };
+                        }
+
+                        const orderUser = await UserModel.findByPk(currentOrder.userId, { transaction: dbTransaction });
+                        if (!orderUser) {
+                            if (currentOrder.isComissionDistributed) {
+                                await currentOrder.update({ isComissionDistributed: false }, { transaction: dbTransaction });
+                            }
+                            return { processed: false, reason: `order user ${currentOrder.userId} not found` };
+                        }
+                        if (!orderUser.fromUser) {
+                            if (currentOrder.isComissionDistributed) {
+                                await currentOrder.update({ isComissionDistributed: false }, { transaction: dbTransaction });
+                            }
+                            return { processed: false, reason: "order user has no referrer parent sponsor" };
+                        }
+                        console.log(`[DEBUG] Order user ID=${currentOrder.userId} referred by Sponsor ID=${orderUser.fromUser}`);
+
+                        console.log(`[DEBUG] Calling distributeComissionHelper recursively starting at Sponsor ID=${orderUser.fromUser}`);
+                        const remainingAmount = await distributeComissionHelper(
+                            orderUser.fromUser,
+                            comissionData.id,
+                            currentOrder,
+                            comissionAmount,
+                            comissionData,
+                            currentOrder.userId,
+                            ib.id,
+                            0,
+                            dbTransaction
+                        );
+
+                        console.log(`[DEBUG] distributeComissionHelper returned remainingAmount=${remainingAmount}`);
+                        if (remainingAmount === false) {
+                            throw new Error("sub-IB commission distribution failed");
+                        }
+
+                        if (Number(remainingAmount) > 0) {
+                            console.log(`[DEBUG] Crediting remaining commission ${remainingAmount} to master IB ID=${ib.id}`);
+                            const assetData = await AssetModel.findOne({
+                                where: { userId: ib.id, isDeleted: false },
+                                transaction: dbTransaction
+                            });
+                            if (!assetData) {
+                                throw new Error(`Asset wallet not found for master IB ID=${ib.id}`);
+                            }
+
+                            assetData.totalIBIncome = Number(assetData.totalIBIncome || 0) + Number(remainingAmount);
+                            await assetData.save({ transaction: dbTransaction });
+                            console.log(`[DEBUG] Updated Asset Model for master IB ID=${ib.id}: new totalIBIncome=${assetData.totalIBIncome}`);
+
+                            await IbcomissionTrxModel.create({
+                                userId: ib.id,
+                                fromUser: currentOrder.userId,
+                                loginId: currentOrder.Login,
+                                orderId: currentOrder.id,
+                                symbol: currentOrder.Symbol,
+                                price: currentOrder.Price,
+                                volume: currentOrder.Volume,
+                                comissionAmount: remainingAmount,
+                                ibId: ib.id,
+                                type: (currentOrder.Action == 0 || currentOrder.Action == "0" || currentOrder.type == 0) ? "BUY" : "SELL",
+                            }, { transaction: dbTransaction });
+                        }
+
+                        const createdTrxCount = await IbcomissionTrxModel.count({
+                            where: { ibId: ib.id, orderId: currentOrder.id, isDeleted: false },
+                            transaction: dbTransaction
+                        });
+                        if (createdTrxCount <= 0) {
+                            if (currentOrder.isComissionDistributed) {
+                                await currentOrder.update({ isComissionDistributed: false }, { transaction: dbTransaction });
+                            }
+                            return { processed: false, reason: "no commission transaction was created" };
+                        }
+
+                        await currentOrder.update({ isComissionDistributed: true }, { transaction: dbTransaction });
+                        console.log(`[DEBUG] Order ID=${currentOrder.id} flagged as distributed (isComissionDistributed = true).`);
+                        return { processed: true };
                     });
-                    if (assetData) {
-                        assetData.totalIBIncome += Number(remainingAmount);
-                        await assetData.save();
-                        console.log(`[DEBUG] Updated Asset Model for master IB ID=${ib.id}: new totalIBIncome=${assetData.totalIBIncome}`);
+
+                    if (result.processed) {
+                        totalProcessed++;
+                    } else if (result.reason === "already_paid") {
+                        totalAlreadyPaid++;
+                        console.log(`[DEBUG] [SKIP] Order ID=${order.id} already has commission transactions.`);
+                    } else {
+                        totalSkipped++;
+                        console.log(`[DEBUG] [SKIP] Order ID=${order.id}: ${result.reason}`);
                     }
+                } catch (orderError) {
+                    totalSkipped++;
+                    console.log(`[DEBUG] [SKIP] Order ID=${order.id} failed during distribution: ${orderError.message}`);
 
-                    await IbcomissionTrxModel.create({
-                        userId: ib.id,
-                        fromUser: order.userId,
-                        loginId: order.Login,
-                        orderId: order.id,
-                        symbol: order.Symbol,
-                        price: order.Price,
-                        volume: order.Volume,
-                        comissionAmount: remainingAmount,
-                        ibId: ib.id,
-                        type: (order.Action == 0 || order.Action == "0" || order.type == 0) ? "BUY" : "SELL",
+                    const transactionCount = await IbcomissionTrxModel.count({
+                        where: { ibId: ib.id, orderId: order.id, isDeleted: false }
                     });
+                    if (transactionCount === 0 && order.isComissionDistributed) {
+                        await order.update({ isComissionDistributed: false });
+                        console.log(`[DEBUG] Order ID=${order.id} restored to undistributed because no commission transaction exists.`);
+                    }
                 }
-
-                await order.update({
-                    isComissionDistributed: true
-                });
-                console.log(`[DEBUG] Order ID=${order.id} flagged as distributed (isComissionDistributed = true).`);
-                totalProcessed++;
             }
         }
 
-        console.log(`\n[DEBUG] manualDistributeCommission finished: totalProcessed=${totalProcessed} orders.`);
+        console.log(`\n[DEBUG] manualDistributeCommission finished: totalProcessed=${totalProcessed}, totalRecovered=${totalRecovered}, totalAlreadyPaid=${totalAlreadyPaid}, totalSkipped=${totalSkipped} orders.`);
         adminLogger.info('Exiting manualDistributeCommission: Request Processed', { method: request.method || "", route: request.originalUrl || "" });
         return response.json({
             status: true,
             message: `Manual IB commission distribution completed successfully.`,
             data: {
-                processedOrdersCount: totalProcessed
+                processedOrdersCount: totalProcessed,
+                recoveredOrdersCount: totalRecovered,
+                alreadyPaidOrdersCount: totalAlreadyPaid,
+                skippedOrdersCount: totalSkipped
             }
         });
     } catch (e) {

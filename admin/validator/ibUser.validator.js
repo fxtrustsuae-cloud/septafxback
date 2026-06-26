@@ -239,6 +239,22 @@ module.exports.manualDistribute = (request, response, next) => {
     return next();
 };
 
+module.exports.trackMt5Orders = (request, response, next) => {
+    const rules = Joi.object().keys({
+        ibId: Joi.number().integer().min(1).optional(),
+        fromDate: Joi.date().iso().optional(),
+        toDate: Joi.date().iso().min(Joi.ref("fromDate")).optional(),
+    });
+    const { error } = rules.validate(request.body);
+
+    if (error) {
+        return response
+            .status(422)
+            .json({ status: false, message: error.message, data: null });
+    }
+    return next();
+};
+
 module.exports.mt5OrderList = (request, response, next) => {
     const rules = Joi.object().keys({
         page: Joi.number().integer().min(1).optional(),

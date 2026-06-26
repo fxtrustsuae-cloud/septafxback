@@ -1,4 +1,5 @@
 const { Op } = require("sequelize");
+const sequelize = require("../../config/db.config");
 const UserModel = require("../../models/users.model");
 const AssetModel = require("../../models/asset.model");
 const Mt5Order = require("../../models/mt5order.model");
@@ -22,130 +23,224 @@ function splitSymbol(symbol) {
     };
 }
 
-async function saveOrderIndatabse(loginId, groupId, level, ibId, userId) {
+function createTrackingStats(extra = {}) {
+    return {
+        ibCount: 0,
+        referralUserCount: 0,
+        mt5AccountCount: 0,
+        fetchedOrdersCount: 0,
+        insertedOrdersCount: 0,
+        duplicateOrdersCount: 0,
+        skippedEntryOrdersCount: 0,
+        missingPlanOrdersCount: 0,
+        failedOrdersCount: 0,
+        errors: [],
+        ...extra
+    };
+}
+
+function mergeTrackingStats(target, source = {}) {
+    const numericKeys = [
+        "ibCount",
+        "referralUserCount",
+        "mt5AccountCount",
+        "fetchedOrdersCount",
+        "insertedOrdersCount",
+        "duplicateOrdersCount",
+        "skippedEntryOrdersCount",
+        "missingPlanOrdersCount",
+        "failedOrdersCount"
+    ];
+
+    numericKeys.forEach((key) => {
+        target[key] = Number(target[key] || 0) + Number(source[key] || 0);
+    });
+
+    if (Array.isArray(source.errors) && source.errors.length > 0) {
+        target.errors.push(...source.errors);
+    }
+
+    return target;
+}
+
+function resolveTrackingWindow(options = {}) {
+    const now = Math.floor(Date.now() / 1000);
+    let to = now;
+    let from = to - 6 * 60 * 60;
+
+    if (options.toDate) {
+        const end = new Date(options.toDate);
+        end.setHours(23, 59, 59, 999);
+        to = Math.floor(end.getTime() / 1000);
+    }
+
+    if (options.fromDate) {
+        const start = new Date(options.fromDate);
+        start.setHours(0, 0, 0, 0);
+        from = Math.floor(start.getTime() / 1000);
+    }
+
+    return { from, to };
+}
+
+async function saveOrderIndatabse(loginId, groupId, level, ibId, userId, options = {}) {
+    const stats = createTrackingStats({ loginId, groupId, userId, ibId });
     try {
-        const to = Math.floor(Date.now() / 1000); // current timestamp in seconds
-        const from = to - 6 * 60 * 60; // (6 hours) back
+        const { from, to } = resolveTrackingWindow(options);
         
         const response = await dealController.getDealsPage(loginId, from, to);
-        const orders = response.answer;
-        if(!orders) return false;
+        const orders = response && response.answer;
+        if(!orders) return stats;
         console.log(`Fetched ${orders.length} orders.`);
+        stats.fetchedOrdersCount = orders.length;
 
         for (const order of orders) {
-            if(order.Entry == 0) continue;
-            const existing = await Mt5Order.findOne({ where: { PositionID: order.PositionID } });
-            if (existing) {
-                console.log(`Skipping duplicate PositionID: ${order.PositionID}`);
-                continue;
+            try {
+                if(order.Entry == 0) {
+                    stats.skippedEntryOrdersCount++;
+                    continue;
+                }
+
+                const existing = await Mt5Order.findOne({ where: { PositionID: order.PositionID } });
+                if (existing) {
+                    stats.duplicateOrdersCount++;
+                    console.log(`Skipping duplicate PositionID: ${order.PositionID}`);
+                    continue;
+                }
+
+                const checkPlan = await IbComissionPlanModel.findOne({
+                    where: { ibId, groupId }
+                });
+                if (!checkPlan) {
+                    stats.missingPlanOrdersCount++;
+                    console.log(`Skipping PositionID ${order.PositionID}: no IB commission plan for IB ID=${ibId}, groupId=${groupId}`);
+                    continue;
+                }
+
+                const input = order.Symbol;
+                const { symbol: baseSymbol, extension } = splitSymbol(input);
+
+                await Mt5Order.create({
+                    mt5GroupId: groupId,
+                    level,
+                    comissionPlanId: checkPlan.id,
+                    ibId,
+                    userId,
+                    baseSymbol,
+                    extension,
+                    Deal: order.Deal,
+                    ExternalID: order.ExternalID,
+                    Login: order.Login,
+                    Dealer: order.Dealer,
+                    Order: order.Order,
+                    Action: order.Action,
+                    Entry: order.Entry,
+                    Reason: order.Reason,
+                    Digits: order.Digits,
+                    DigitsCurrency: order.DigitsCurrency,
+                    ContractSize: order.ContractSize,
+                    Time: order.Time,
+                    TimeMsc: order.TimeMsc,
+                    Symbol: order.Symbol,
+                    Price: order.Price,
+                    Volume: order.Volume,
+                    VolumeExt: order.VolumeExt,
+                    Profit: order.Profit,
+                    Storage: order.Storage,
+                    Commission: order.Commission,
+                    Fee: order.Fee,
+                    RateProfit: order.RateProfit,
+                    RateMargin: order.RateMargin,
+                    ExpertID: order.ExpertID,
+                    PositionID: order.PositionID,
+                    Comment: order.Comment,
+                    ProfitRaw: order.ProfitRaw,
+                    PricePosition: order.PricePosition,
+                    PriceSL: order.PriceSL,
+                    PriceTP: order.PriceTP,
+                    VolumeClosed: order.VolumeClosed,
+                    VolumeClosedExt: order.VolumeClosedExt,
+                    TickValue: order.TickValue,
+                    TickSize: order.TickSize,
+                    Flags: order.Flags,
+                    Gateway: order.Gateway,
+                    PriceGateway: order.PriceGateway,
+                    VolumeGatewayExt: order.VolumeGatewayExt,
+                    ActionGateway: order.ActionGateway,
+                    ModifyFlags: order.ModifyFlags,
+                    Value: order.Value,
+                });
+
+                stats.insertedOrdersCount++;
+                console.log(`Inserted Order with PositionID: ${order.PositionID}`);
+            } catch (e) {
+                stats.failedOrdersCount++;
+                stats.errors.push({
+                    loginId,
+                    positionId: order.PositionID,
+                    message: e.message
+                });
+                console.error("Error during order insert:", e.message);
             }
-
-            const checkPlan = await IbComissionPlanModel.findOne({
-                where: { ibId, groupId }
-            });
-
-            const input = order.Symbol;
-            const { symbol: baseSymbol, extension } = splitSymbol(input);
-
-            // console.log(order)
-            const newOrder = await Mt5Order.create({
-                mt5GroupId: groupId,
-                level,
-                comissionPlanId: checkPlan.id,
-                ibId,
-                userId,
-                baseSymbol, 
-                extension,
-                Deal: order.Deal,
-                ExternalID: order.ExternalID,
-                Login: order.Login,
-                Dealer: order.Dealer,
-                Order: order.Order,
-                Action: order.Action,
-                Entry: order.Entry,
-                Reason: order.Reason,
-                Digits: order.Digits,
-                DigitsCurrency: order.DigitsCurrency,
-                ContractSize: order.ContractSize,
-                Time: order.Time,
-                TimeMsc: order.TimeMsc,
-                Symbol: order.Symbol,
-                Price: order.Price,
-                Volume: order.Volume,
-                VolumeExt: order.VolumeExt,
-                Profit: order.Profit,
-                Storage: order.Storage,
-                Commission: order.Commission,
-                Fee: order.Fee,
-                RateProfit: order.RateProfit,
-                RateMargin: order.RateMargin,
-                ExpertID: order.ExpertID,
-                PositionID: order.PositionID,
-                Comment: order.Comment,
-                ProfitRaw: order.ProfitRaw,
-                PricePosition: order.PricePosition,
-                PriceSL: order.PriceSL,
-                PriceTP: order.PriceTP,
-                VolumeClosed: order.VolumeClosed,
-                VolumeClosedExt: order.VolumeClosedExt,
-                TickValue: order.TickValue,
-                TickSize: order.TickSize,
-                Flags: order.Flags,
-                Gateway: order.Gateway,
-                PriceGateway: order.PriceGateway,
-                VolumeGatewayExt: order.VolumeGatewayExt,
-                ActionGateway: order.ActionGateway,
-                ModifyFlags: order.ModifyFlags,
-                Value: order.Value,
-            });
-
-            console.log(`Inserted Order with PositionID: ${order.PositionID}`);
         }
         console.log(`For Login ${loginId} Order Data Saved.`);
     } catch (e) {
+        stats.failedOrdersCount++;
+        stats.errors.push({ loginId, message: e.message });
         console.error("Error during insert:", e.message);
     }
+    return stats;
 }
 
 // IB-Plan and Rebate-Plan
-async function mt5AccountList(userId, level, ibId, groupIds){
+async function mt5AccountList(userId, level, ibId, groupIds, options = {}){
+    const stats = createTrackingStats({ userId, ibId });
     try {
         const mt5List = await Mt5AccountsModel.findAll({
             where: { accountType: "REAL", userId, isDeleted: false, groupId: { [Op.in]: groupIds } }
-        }); if(mt5List.length == 0) return false;
+        }); if(mt5List.length == 0) return stats;
+        stats.mt5AccountCount += mt5List.length;
 
         for(const mt5Account of mt5List){
-            await saveOrderIndatabse(mt5Account.Login, mt5Account.groupId, level, ibId, mt5Account.userId);
+            const accountStats = await saveOrderIndatabse(mt5Account.Login, mt5Account.groupId, level, ibId, mt5Account.userId, options);
+            mergeTrackingStats(stats, accountStats);
         }
-        return true;
     } catch(e) {
+        stats.failedOrdersCount++;
+        stats.errors.push({ userId, ibId, message: e.message });
         console.error("Fetch Mt5Account List Error:", e.message);
-        return false;
     }
+    return stats;
 }
 
 // For Global Plan
-async function mt5AccountListGlobal(userId, level, ibId){
+async function mt5AccountListGlobal(userId, level, ibId, options = {}){
+    const stats = createTrackingStats({ userId, ibId });
     try {
         const mt5List = await Mt5AccountsModel.findAll({
             where: { accountType: "REAL", userId, isDeleted: false }
-        }); if(mt5List.length == 0) return false;
+        }); if(mt5List.length == 0) return stats;
+        stats.mt5AccountCount += mt5List.length;
 
         for(const mt5Account of mt5List){
-            await saveOrderIndatabse(mt5Account.Login, mt5Account.groupId, level, ibId, mt5Account.userId);
+            const accountStats = await saveOrderIndatabse(mt5Account.Login, mt5Account.groupId, level, ibId, mt5Account.userId, options);
+            mergeTrackingStats(stats, accountStats);
         }
-        return true;
     } catch(e) {
+        stats.failedOrdersCount++;
+        stats.errors.push({ userId, ibId, message: e.message });
         console.error("Fetch Mt5Account List Error:", e.message);
-        return false;
     }
+    return stats;
 }
 
 
-async function ibReferralList(ibId){
+async function ibReferralList(ibId, options = {}){
+    const stats = createTrackingStats({ ibId });
     try {
         const userList = [];
         await buildReferralTree(ibId, 1, userList);
+        stats.referralUserCount = userList.length;
 
         const globalGroup = await IbComissionPlanModel.findOne({
             where: { ibId, planType: "GLOBAL-MODEL", isDeleted: false }
@@ -153,30 +248,34 @@ async function ibReferralList(ibId){
         
         if(globalGroup) {  // For Global remove group id 
             for(const user of userList){
-                await mt5AccountListGlobal(user.id, user.level, ibId);
+                const userStats = await mt5AccountListGlobal(user.id, user.level, ibId, options);
+                mergeTrackingStats(stats, userStats);
             }
         } else {
             const groupList = await IbComissionPlanModel.findAll({
                 where: { ibId, isDeleted: false }
-            }); if(groupList.length == 0) return;
+            }); if(groupList.length == 0) return stats;
             const groupIds = groupList.map(item => item.groupId);
     
             for(const user of userList){
-                await mt5AccountList(user.id, user.level, ibId, groupIds);
+                const userStats = await mt5AccountList(user.id, user.level, ibId, groupIds, options);
+                mergeTrackingStats(stats, userStats);
             }
         }
-
-        return true;
     } catch(e) {
+        stats.failedOrdersCount++;
+        stats.errors.push({ ibId, message: e.message });
         console.error("Fetch Mt5Account List Error:", e.message);
-        return false;
     }
+    return stats;
 }
 
-async function fetchIbList(){
+async function fetchIbList(ibId){
     try {
+        const where = { isIb: true, isDeleted: false };
+        if (ibId) where.id = ibId;
         const ibList = await UserModel.findAll({
-            where: { isIb: true, isDeleted: false }
+            where
         }); if(!ibList) return [];
         return ibList;
     } catch(e) {
@@ -185,31 +284,41 @@ async function fetchIbList(){
     }
 };
 
-async function orderTracking(){
+async function orderTracking(options = {}){
+    const stats = createTrackingStats({ ibResults: [] });
     try {
-        const ibList = await fetchIbList();
+        const ibList = await fetchIbList(options.ibId);
+        stats.ibCount = ibList.length;
 
         for(const ib of ibList) {
-            await ibReferralList(ib.id);
+            const ibStats = await ibReferralList(ib.id, options);
+            stats.ibResults.push(ibStats);
+            mergeTrackingStats(stats, ibStats);
         }
     } catch (e) {
+        stats.failedOrdersCount++;
+        stats.errors.push({ message: e.message });
         console.error("Error during insert:", e.message);
     }
+    return stats;
 }
 
 // orderTracking()
 // setTimeout(orderTracking, 1 * 1000);
 setInterval(orderTracking, 60 * 6 * 1000);
 
-async function distributeComission( userId, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, distributedAmount = 0 ) {
+async function distributeComission( userId, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, distributedAmount = 0, dbTransaction = null ) {
     try {
+        const queryOptions = dbTransaction ? { transaction: dbTransaction } : {};
         const checkUser = await UserModel.findOne({
-            where: { id: userId, isDeleted: false, isComissionAllowed: false }
+            where: { id: userId, isDeleted: false, isComissionAllowed: false },
+            ...queryOptions
         }); if (!checkUser) return remainingAmount;
 
         // Commission row for this sub-IB
         const comissionData = await SubIbComissionModel.findOne({
-            where: { ibId, ibPlanId, subIbId: userId, isDeleted: false }
+            where: { ibId, ibPlanId, subIbId: userId, isDeleted: false },
+            ...queryOptions
         });
 
         let newDistributedAmount = distributedAmount;
@@ -234,19 +343,23 @@ async function distributeComission( userId, ibPlanId, order, remainingAmount, co
                 loginId: order.Login,
                 orderId: order.id,
                 symbol: order.Symbol,
-                price: order.PriceOrder,
+                price: order.Price,
                 volume: order.Volume,
                 comissionAmount,
                 ibId,
-                type: order.type == 0 ? "BUY" : "SELL",
-            });
+                type: (order.Action == 0 || order.Action == "0" || order.type == 0) ? "BUY" : "SELL",
+            }, queryOptions);
 
             const assetData = await AssetModel.findOne({
-                where: { userId, isDeleted: false }
+                where: { userId, isDeleted: false },
+                ...queryOptions
             });
+            if (!assetData) {
+                throw new Error(`Asset wallet not found for sub-IB User ID=${userId}`);
+            }
 
-            assetData.totalIBIncome += Number(comissionAmount);
-            await assetData.save();
+            assetData.totalIBIncome = Number(assetData.totalIBIncome || 0) + Number(comissionAmount);
+            await assetData.save(queryOptions);
 
             remainingAmount -= comissionAmount;
             newDistributedAmount += comissionAmount;
@@ -254,7 +367,7 @@ async function distributeComission( userId, ibPlanId, order, remainingAmount, co
 
         // ==== RECURSE UP THE TREE ====
         if (checkUser.fromUser) {
-            return await distributeComission(checkUser.fromUser, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, newDistributedAmount);
+            return await distributeComission(checkUser.fromUser, ibPlanId, order, remainingAmount, comissionPlanDetails, fromUser, ibId, newDistributedAmount, dbTransaction);
         }
 
         return remainingAmount;
@@ -296,43 +409,72 @@ async function comissionDetails(ibId){
         }); if(orderList.length == 0) return false;
 
         for(const order of orderList){
-            const lot = order.Volume / 10000;
-            
-            const comissionData = await IbComissionPlanModel.findOne({
-                where: { ibId, symbolExtension: order.extension, isDeleted: false }
-            }); if(!comissionData) continue;
-            const comissionAmount = comissionData.ibComission * lot;
+            try {
+                await sequelize.transaction(async (dbTransaction) => {
+                    const currentOrder = await Mt5Order.findByPk(order.id, { transaction: dbTransaction });
+                    if (!currentOrder || currentOrder.isDeleted || currentOrder.isComissionDistributed) return;
 
-            const orderUser = await UserModel.findByPk(order.userId);
-            if(!orderUser.fromUser) continue;
-            const remainingAmount = await distributeComission(orderUser.fromUser, comissionData.id, order, comissionAmount, comissionData, order.userId, ibId, 0);
+                    const existingTrxCount = await IbcomissionTrxModel.count({
+                        where: { ibId, orderId: currentOrder.id, isDeleted: false },
+                        transaction: dbTransaction
+                    });
+                    if (existingTrxCount > 0) {
+                        await currentOrder.update({ isComissionDistributed: true }, { transaction: dbTransaction });
+                        return;
+                    }
 
-            if(remainingAmount) {
-                const assetData = await AssetModel.findOne({
-                    where: { userId: ibId, isDeleted: false }
+                    const lot = Number(currentOrder.Volume) / 10000;
+
+                    const comissionData = await IbComissionPlanModel.findOne({
+                        where: { ibId, symbolExtension: currentOrder.extension, isDeleted: false },
+                        transaction: dbTransaction
+                    }); if(!comissionData) return;
+                    const comissionAmount = Number(comissionData.ibComission || 0) * lot;
+                    if (!Number.isFinite(comissionAmount) || comissionAmount <= 0) return;
+
+                    const orderUser = await UserModel.findByPk(currentOrder.userId, { transaction: dbTransaction });
+                    if(!orderUser || !orderUser.fromUser) return;
+                    const remainingAmount = await distributeComission(orderUser.fromUser, comissionData.id, currentOrder, comissionAmount, comissionData, currentOrder.userId, ibId, 0, dbTransaction);
+                    if (remainingAmount === false) {
+                        throw new Error(`Sub-IB commission distribution failed for order ID=${currentOrder.id}`);
+                    }
+
+                    if(Number(remainingAmount) > 0) {
+                        const assetData = await AssetModel.findOne({
+                            where: { userId: ibId, isDeleted: false },
+                            transaction: dbTransaction
+                        });
+                        if (!assetData) {
+                            throw new Error(`Asset wallet not found for master IB ID=${ibId}`);
+                        }
+                        assetData.totalIBIncome = Number(assetData.totalIBIncome || 0) + Number(remainingAmount);
+                        await assetData.save({ transaction: dbTransaction });
+
+                        await IbcomissionTrxModel.create({
+                            userId: ibId,
+                            fromUser: currentOrder.userId,
+                            loginId: currentOrder.Login,
+                            orderId: currentOrder.id,
+                            symbol: currentOrder.Symbol,
+                            price: currentOrder.Price,
+                            volume: currentOrder.Volume,
+                            comissionAmount: remainingAmount,
+                            ibId,
+                            type: (currentOrder.Action == 0 || currentOrder.Action == "0" || currentOrder.type == 0) ? "BUY" : "SELL",
+                        }, { transaction: dbTransaction });
+                    }
+
+                    const createdTrxCount = await IbcomissionTrxModel.count({
+                        where: { ibId, orderId: currentOrder.id, isDeleted: false },
+                        transaction: dbTransaction
+                    });
+                    if (createdTrxCount > 0) {
+                        await currentOrder.update({ isComissionDistributed: true }, { transaction: dbTransaction });
+                    }
                 });
-                assetData.totalIBIncome += remainingAmount;
-                await assetData.save();
-
-                await IbcomissionTrxModel.create({
-                    userId: ibId,
-                    fromUser: order.userId,
-                    loginId: order.Login,
-                    orderId: order.id,
-                    symbol: order.Symbol,
-                    price: order.PriceOrder,
-                    volume: order.Volume,
-                    comissionAmount: remainingAmount,
-                    ibId,
-                    type: order.type == 0 ? "BUY" : "SELL",
-                });
+            } catch (e) {
+                console.log(`Error while distributing IB commission for order ID=${order.id}`, e);
             }
-
-            await Mt5Order.update({
-                isComissionDistributed: true 
-            }, {
-                where: { id: order.id }
-            });
         }
     } catch (e) {
         console.log("error", e)
@@ -358,3 +500,7 @@ async function initComission(){
 // initComission()
 // setTimeout(initComission, 1 * 1000);
 setInterval(initComission, 9 * 60 * 1000);
+
+module.exports = {
+    orderTracking,
+};

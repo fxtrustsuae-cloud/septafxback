@@ -19,6 +19,7 @@ router.post("/user/move-to-ib", ibUserValidator.moveUserToIb, verifyJWTToken, ch
 router.post("/remove/user-from-ib", ibUserValidator.removeUserFromIb, verifyJWTToken, checkAdminPermission("IB-REMOVE-USER"), ibUserController.removeUserFromIb);
 router.get("/comission/trx-list", ibUserValidator.list, verifyJWTToken, checkAdminPermission("IB-COMMISSION-TRX-LIST"), ibUserController.ibComissionList);
 router.get("/report", ibUserValidator.ibReport, verifyJWTToken, checkAdminPermission("IB-REPORT"), ibUserController.ibReport);
+router.post("/order/track", ibUserValidator.trackMt5Orders, verifyJWTToken, checkAdminPermission("IB-MANUAL-DISTRIBUTION"), ibUserController.trackMt5Orders);
 router.post("/distribute", ibUserValidator.manualDistribute, verifyJWTToken, checkAdminPermission("IB-MANUAL-DISTRIBUTION"), ibUserController.manualDistributeCommission);
 router.get("/order/list", ibUserValidator.mt5OrderList, verifyJWTToken, checkAdminPermission("IB-COMMISSION-TRX-LIST"), ibUserController.mt5OrderList);
 
